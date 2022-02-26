@@ -189,6 +189,7 @@ function main()
     say('done.')
 
     say('playing sines...')
+    softcut.reset()
     sines_stress()
     say('capturing CPU (sines)...')
     clock.sleep(0.01)
