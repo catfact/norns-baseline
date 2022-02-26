@@ -15,8 +15,8 @@ Engine_BaselineSines : CroneEngine {
             var hz = msg[2];
             var pan = msg[3];
             {
-                var amp = AmpComp.ir(hz) * amp;
-                Out.ar(b.index, Pan2.ar(SinOsc.ar(hz)*amp, pan))
+                var mul = AmpComp.ir(hz) * amp;
+                Out.ar(b.index, Pan2.ar(SinOsc.ar(hz)*mul, pan))
             }.play(target:g, addAction:\addToTail);
 		});
 

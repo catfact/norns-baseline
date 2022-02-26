@@ -8,10 +8,10 @@ engine.name = 'BaselineSines'
 --- vars
 
 ---- constants
-nsamples = 10
+nsamples = 500
 sample_period = 0.25
 
-nsines = 300
+nsines = 340
 
 ---- state
 cpu_history = {}
@@ -21,7 +21,6 @@ main_clock = nil
 
 ------------------------------------------
 --- script functions
-
 
 local say = function(str)
     print(str)
@@ -91,21 +90,77 @@ function capture(name)
     f:write('N = '..#cpu_history..'\n')
     f:write('period = '..sample_period..'\n')
     f:write('\n\n')
+
+    local write_stats = function(data) 
+        local statsk = {'min','max','mean','median','q1','q3'}
+        local st = stats(data)
+        for i,k in ipairs(statsk) do
+            f:write(k..' = '..st[k]..'\n')
+        end
+    end
     f:write('[cpu]\n')
-    local statsk = {'min','max','mean','median','q1','q3'}
-    local write_stats = function() end
-    for i,v in ipairs(stats(cpu_history)) do
-        f:write(k..' = '..v..'\n')
-    end
+    write_stats(cpu_history)
     f:write('\n\n')
+
     f:write('[xruns]\n')
-    for k,v in pairs(stats(cpu_history)) do
-        f:write(k..' = '..v..'\n')
-    end
+    write_stats(xrun_history)
+
     f:close()
 end
 
-
+function softcut_stress()
+    local regions={
+        {1,1,80},
+        {1,82,161},
+        {1,163,243},
+        {2,1,80},
+        {2,82,161},
+        {2,163,243},
+    }
+    
+    softcut.reset()
+    audio.level_cut(1)
+    audio.level_adc_cut(1)
+    audio.level_eng_cut(1)
+    audio.level_tape_cut(1)
+    for i=1,6 do
+        softcut.enable(i,1)
+    
+        softcut.level_input_cut(1,i,0.5)
+        softcut.level_input_cut(2,i,0.5)
+    
+        softcut.buffer(i,regions[i][1])
+        softcut.level(i,1.0)
+        softcut.pan(i,0)
+        softcut.loop(i,1)
+        softcut.loop_start(i,regions[i][2])
+        softcut.loop_end(i,regions[i][3])
+    
+        softcut.level_slew_time(i,0.2)
+        softcut.rate_slew_time(i,0.2)
+        softcut.recpre_slew_time(i,0.1)
+        softcut.fade_time(i,0.2)
+    
+        softcut.rec_level(i,0.5)
+        softcut.pre_level(i,0.5)
+        softcut.phase_quant(i,0.025)
+    
+        softcut.post_filter_dry(i,0.0)
+        softcut.post_filter_lp(i,1.0)
+        softcut.post_filter_rq(i,1.0)
+        softcut.post_filter_fc(i,20100)
+    
+        softcut.pre_filter_dry(i,1.0)
+        softcut.pre_filter_lp(i,1.0)
+        softcut.pre_filter_rq(i,1.0)
+        softcut.pre_filter_fc(i,20100)
+    
+        softcut.position(i,regions[i][2])
+        softcut.play(i,1)
+        softcut.rec(i,1)
+        softcut.rate(i,8)
+    end
+end
 
 function main() 
     say('playing sines...')
@@ -121,10 +176,15 @@ function main()
     clock.sleep(0.01)
     capture('sines')
     say('done.')
-    clock.sleep(0.01)
     engine.clear()
+    clock.sleep(0.1)
+
     -- test softcut
-    -- TODO
+    softcut_stress()
+    say('capturing CPU (softcut)...')
+    clock.sleep(0.1)
+    capture('softcut')
+    say('done.')
 end
 
 --------------------
@@ -139,6 +199,8 @@ redraw = function()
 end
 
 init = function()
+    audio.rev_off()
+    audio.comp_off()
     main_clock = clock.run(main)
 end
 
