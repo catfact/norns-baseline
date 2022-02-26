@@ -3,7 +3,7 @@
 -- runs stress tests
 -- test 1: all softcut voices at 8x, R+W
 -- test 2: many sinewaves in supercollider
--- test 3: both 
+-- test 3: both (optional)
 --
 -- performance results are saved
 -- in ~/dust/data/baseline
@@ -16,8 +16,9 @@ engine.name = 'BaselineSines'
 ---- constants
 nsamples = 500
 sample_period = 0.25
-
 nsines = 360
+run_both = false
+
 
 ---- state
 cpu_history = {}
@@ -179,6 +180,14 @@ function sines_stress()
 end
 
 function main() 
+
+    say("playing softcut...")
+    softcut_stress()
+    say('capturing CPU (softcut)...')
+    clock.sleep(0.1)
+    capture('softcut')
+    say('done.')
+
     say('playing sines...')
     sines_stress()
     say('capturing CPU (sines)...')
@@ -189,21 +198,16 @@ function main()
     clock.sleep(0.1)
 
 
-    say("playing softcut...")
-    softcut_stress()
-    say('capturing CPU (softcut)...')
-    clock.sleep(0.1)
-    capture('softcut')
-    say('done.')
-
-    say('playing sines again...')
-    sines_stress()
-    say('capturing CPU (both)...')
-    clock.sleep(0.01)
-    capture('both')
-    say('done.')
-    engine.clear()
-    clock.sleep(0.1)
+    if run_both then
+        say('playing sines again...')
+        sines_stress()
+        say('capturing CPU (both)...')
+        clock.sleep(0.01)
+        capture('both')
+        say('done.')
+        engine.clear()
+        clock.sleep(0.1)
+    end
 end
 
 --------------------
