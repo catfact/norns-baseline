@@ -1,6 +1,12 @@
 -- baseline norns performance test
 -- 
--- runs stress tests on supercollider/softcut
+-- runs stress tests
+-- test 1: all softcut voices at 8x, R+W
+-- test 2: many sinewaves in supercollider
+-- test 3: both 
+--
+-- performance results are saved
+-- in ~/dust/data/baseline
 
 engine.name = 'BaselineSines'
 
@@ -11,7 +17,7 @@ engine.name = 'BaselineSines'
 nsamples = 500
 sample_period = 0.25
 
-nsines = 340
+nsines = 360
 
 ---- state
 cpu_history = {}
@@ -162,8 +168,7 @@ function softcut_stress()
     end
 end
 
-function main() 
-    say('playing sines...')
+function sines_stress()
     local randhz = function()
         return 55.0 * math.pow(2.0, math.random()*4)
     end
@@ -171,7 +176,11 @@ function main()
         engine.newsine(0.02, randhz(), math.random()-0.5)
         clock.sleep(0.01)
     end
+end
 
+function main() 
+    say('playing sines...')
+    sines_stress()
     say('capturing CPU (sines)...')
     clock.sleep(0.01)
     capture('sines')
@@ -179,12 +188,22 @@ function main()
     engine.clear()
     clock.sleep(0.1)
 
-    -- test softcut
+
+    say("playing softcut...")
     softcut_stress()
     say('capturing CPU (softcut)...')
     clock.sleep(0.1)
     capture('softcut')
     say('done.')
+
+    say('playing sines again...')
+    sines_stress()
+    say('capturing CPU (both)...')
+    clock.sleep(0.01)
+    capture('both')
+    say('done.')
+    engine.clear()
+    clock.sleep(0.1)
 end
 
 --------------------
