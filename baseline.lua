@@ -14,11 +14,13 @@ engine.name = 'BaselineSines'
 --- vars
 
 ---- constants
-nsamples = 500
+nsamples = 20
 sample_period = 0.25
 nsines = 360
-run_both = false
 
+run_softcut = true
+run_sines = false
+run_both = false
 
 ---- state
 cpu_history = {}
@@ -72,8 +74,14 @@ local stats = function(arr)
     return y 
 end
 
+function git_head(loc)
+    res = util.os_capture('cd '..loc..' && git log --pretty=format:%h\\ %d\\ %s -n 1')
+    return res
+end
 
 function capture(name)
+    -- clear the saved xrun count
+    _ = _norns.audio_get_xrun_count()
     cpu_history = {}
     xruns_history = {}
     for i=1,nsamples do
@@ -82,8 +90,8 @@ function capture(name)
         clock.sleep(sample_period)
     end
     
-    local datestr = os.date('_%Y%m%d_%H%M%S', os.time())
-    local outfile = _path.data..'baseline/data_'..name..datestr..'.csv'
+    local datestr = os.date('%Y%m%d_%H%M%S', os.time())
+    local outfile = _path.data..'baseline/data_'..name..'_'..datestr..'.csv'
     local f=io.open(outfile,'w+')
     f:write('cpu,\txruns,\t\n')
     for i,v in ipairs(cpu_history) do
@@ -94,6 +102,8 @@ function capture(name)
     outfile = _path.data..'baseline/stats_'..name..datestr..'.csv'
     f=io.open(outfile,'w+')
     f:write('[meta]\n')
+    f:write('norns version = "'..git_head('~/norns')..'"\n')
+    f:write('softcut version = "'..git_head('~/norns/crone/softcut')..'"\n')
     f:write('N = '..#cpu_history..'\n')
     f:write('period = '..sample_period..'\n')
     f:write('\n\n')
@@ -115,7 +125,7 @@ function capture(name)
     f:close()
 end
 
-function softcut_stress()
+function softcut_stress(dur)
     local regions={
         {1,1,80},
         {1,82,161},
@@ -124,8 +134,6 @@ function softcut_stress()
         {2,82,161},
         {2,163,243},
     }
-    
-    softcut.reset()
     audio.level_cut(1)
     audio.level_adc_cut(1)
     audio.level_eng_cut(1)
@@ -144,7 +152,7 @@ function softcut_stress()
         softcut.loop_end(i,regions[i][3])
     
         softcut.level_slew_time(i,0.2)
-        softcut.rate_slew_time(i,0.2)
+        softcut.rate_slew_time(i,0.0)
         softcut.recpre_slew_time(i,0.1)
         softcut.fade_time(i,0.2)
     
@@ -166,6 +174,12 @@ function softcut_stress()
         softcut.play(i,1)
         softcut.rec(i,1)
         softcut.rate(i,8)
+
+        clock.sleep(0.1)
+
+        -- add a really slow rate slew down
+        softcut.rate_slew_time(i, dur)
+        softcut.rate(i, 7.5)
     end
 end
 
@@ -181,23 +195,31 @@ end
 
 function main() 
 
-    say("playing softcut...")
-    softcut_stress()
-    say('capturing CPU (softcut)...')
-    clock.sleep(0.1)
-    capture('softcut')
-    say('done.')
+    if run_softcut then
+        say('resetting softcut...')
+        softcut.reset()
+        clock.sleep(1)
+        say("playing softcut...")
+        softcut_stress(nsamples * sample_period * 0.5)
+        clock.sleep(1)
+        say('capturing CPU (softcut)...')
+        capture('softcut')
+        say('done.')
+    end
 
-    say('playing sines...')
-    softcut.reset()
-    sines_stress()
-    say('capturing CPU (sines)...')
-    clock.sleep(0.01)
-    capture('sines')
-    say('done.')
-    engine.clear()
-    clock.sleep(0.1)
-
+    if run_sines then
+        say('resetting softcut...')
+        softcut.reset()
+        clock.sleep(1)
+        say('playing sines...')
+        sines_stress()
+        say('capturing CPU (sines)...')
+        clock.sleep(1)
+        capture('sines')
+        say('done.')
+        engine.clear()
+        clock.sleep(1)
+    end
 
     if run_both then
         say('playing sines again...')
@@ -223,8 +245,8 @@ redraw = function()
 end
 
 init = function()
-    audio.rev_off()
-    audio.comp_off()
+    audio.rev_on()
+    audio.comp_on()
     main_clock = clock.run(main)
 end
 
