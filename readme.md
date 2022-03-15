@@ -23,3 +23,5 @@ for each test, a `.csv` file records metrics for each sample point, and a `.toml
 test 3 is presently not very useful, except to verify that the two processes are indepednent: it will be identical to the worst case of tests 1 and 2. so it is disabled by default (also a constant in script.)
 
 test 2 is potentially useful, but typically the softcut test is sufficient and tests are lengthy, so test 2 is also disabled by default.
+
+note that the **system reverb and compressor are both enabled during all tests.**
