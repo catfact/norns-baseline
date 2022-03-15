@@ -14,7 +14,7 @@ engine.name = 'BaselineSines'
 --- vars
 
 ---- constants
-nsamples = 20
+nsamples = 500
 sample_period = 0.25
 nsines = 360
 
