@@ -99,11 +99,11 @@ function capture(name)
     end
     f:close()
 
-    outfile = _path.data..'baseline/stats_'..name.."_"..datestr..'.csv'
+    outfile = _path.data..'baseline/stats_'..name.."_"..datestr..'.toml'
     f=io.open(outfile,'w+')
     f:write('[meta]\n')
-    f:write('norns version = "'..git_head('~/norns')..'"\n')
-    f:write('softcut version = "'..git_head('~/norns/crone/softcut')..'"\n')
+    f:write('norns_version = "'..git_head('~/norns')..'"\n')
+    f:write('softcut_version = "'..git_head('~/norns/crone/softcut')..'"\n')
     f:write('N = '..#cpu_history..'\n')
     f:write('period = '..sample_period..'\n')
     f:write('\n\n')
