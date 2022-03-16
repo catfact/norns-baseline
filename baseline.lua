@@ -25,6 +25,7 @@ run_both = false
 ---- state
 cpu_history = {}
 xrun_history = {}
+
 msg = ''
 main_clock = nil
 
@@ -75,18 +76,31 @@ local stats = function(arr)
 end
 
 function git_head(loc)
-    res = util.os_capture('cd '..loc..' && git log --pretty=format:%h\\ %d\\ %s -n 1')
+    local res = util.os_capture('cd '..loc..' && git log --pretty=format:%h\\ %d\\ %s -n 1')
+    return res
+end
+
+function get_cpu_hz() 
+    local f = io.open('/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq')
+    local res = f:read("*a")
+    f:close()
     return res
 end
 
 function capture(name)
     -- clear the saved xrun count
+    local cpu_hz_start = get_cpu_hz()
+    local cpu_hz_mid = nil
     _ = _norns.audio_get_xrun_count()
     cpu_history = {}
     xruns_history = {}
+    local n2 = nsamples/2
     for i=1,nsamples do
         table.insert(cpu_history, _norns.audio_get_cpu_load())
         table.insert(xrun_history, _norns.audio_get_xrun_count())
+        if i==n2 then 
+            cpu_hz_mid = get_cpu_hz()
+        end
         clock.sleep(sample_period)
     end
     
@@ -98,7 +112,7 @@ function capture(name)
         f:write(tostring(v)..',\t'..tostring(xrun_history[i])..',\t\n')
     end
     f:close()
-
+    local cpu_hz_end = get_cpu_hz()
     outfile = _path.data..'baseline/stats_'..name.."_"..datestr..'.toml'
     f=io.open(outfile,'w+')
     f:write('[meta]\n')
@@ -106,6 +120,12 @@ function capture(name)
     f:write('softcut_version = "'..git_head('~/norns/crone/softcut')..'"\n')
     f:write('N = '..#cpu_history..'\n')
     f:write('period = '..sample_period..'\n')
+    f:write('\n\n')
+    
+    f:write('[speed]\n')
+    f:write('"cpu_hz_start" = '..cpu_hz_start)
+    f:write('"cpu_hz_mid" = '..cpu_hz_mid)
+    f:write('"cpu_hz_end" = '..cpu_hz_end)
     f:write('\n\n')
 
     local write_stats = function(data) 
@@ -115,7 +135,7 @@ function capture(name)
             f:write(k..' = '..st[k]..'\n')
         end
     end
-    f:write('[cpu]\n')
+    f:write('[load]\n')
     write_stats(cpu_history)
     f:write('\n\n')
 
@@ -252,6 +272,4 @@ end
 
 cleanup = function()
     clock.cancel(main_clock)
-    -- FIXME: need to do something like close file pointers etc?
-    -- (currently, breaks if re-run before finish?)
 end
