@@ -99,7 +99,7 @@ function capture(name)
     end
     f:close()
 
-    outfile = _path.data..'baseline/stats_'..name..datestr..'.csv'
+    outfile = _path.data..'baseline/stats_'..name.."_"..datestr..'.csv'
     f=io.open(outfile,'w+')
     f:write('[meta]\n')
     f:write('norns version = "'..git_head('~/norns')..'"\n')
